@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f5f3ed">
+  <title>TherapyFlow | Clinical workspace</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <div class="brand-mark"><span></span><span></span><span></span></div>
+        <span>Therapy<span class="brand-accent">Flow</span></span>
+      </div>
+      <div class="workspace-label">CLINICAL WORKSPACE</div>
+      <nav class="main-nav" aria-label="Main navigation">
+        <button class="nav-item active" data-view="Overview"><i data-lucide="layout-dashboard"></i><span>Overview</span></button>
+        <button class="nav-item" data-view="Clients"><i data-lucide="users-round"></i><span>Clients</span><b>12</b></button>
+        <button class="nav-item" data-view="Sessions"><i data-lucide="notebook-pen"></i><span>Sessions</span></button>
+        <button class="nav-item" data-view="Assessments"><i data-lucide="clipboard-check"></i><span>Assessments</span></button>
+        <button class="nav-item" data-view="Messages"><i data-lucide="message-circle"></i><span>Messages</span><b class="unread">3</b></button>
+      </nav>
+      <div class="workspace-label">PRACTICE</div>
+      <nav class="main-nav" aria-label="Practice navigation">
+        <button class="nav-item" data-view="Calendar"><i data-lucide="calendar-days"></i><span>Calendar</span></button>
+        <button class="nav-item" data-view="Resources"><i data-lucide="library"></i><span>Resources</span></button>
+        <button class="nav-item" data-view="Reports"><i data-lucide="bar-chart-3"></i><span>Reports</span></button>
+      </nav>
+      <div class="sidebar-bottom">
+        <button class="nav-item" data-view="Settings"><i data-lucide="settings-2"></i><span>Settings</span></button>
+        <div class="profile-mini"><div class="avatar avatar-small">DN</div><div><strong>Dr. Nyawose</strong><span>Psychologist</span></div><i data-lucide="more-horizontal"></i></div>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar">
+        <button class="icon-button menu-toggle" id="menuToggle" aria-label="Open navigation"><i data-lucide="menu"></i></button>
+        <div class="breadcrumb"><span>Wednesday, 21 August 2026</span><strong>/</strong><span>Overview</span></div>
+        <div class="top-actions">
+          <button class="icon-button" id="searchButton" aria-label="Search"><i data-lucide="search"></i></button>
+          <button class="icon-button notification-button" aria-label="Notifications"><i data-lucide="bell"></i><span></span></button>
+          <div class="avatar avatar-small">DN</div>
+        </div>
+      </header>
+
+      <div class="content-wrap">
+        <section class="welcome-row">
+          <div>
+            <p class="eyebrow">WEDNESDAY, 21 AUGUST</p>
+            <h1>Good morning, <em>Dr. Nyawose.</em></h1>
+            <p class="subhead">Here is your clinical picture for today.</p>
+          </div>
+          <button class="primary-button" id="newSession"><i data-lucide="plus"></i> New session</button>
+        </section>
+
+        <section class="metric-grid" aria-label="Practice summary">
+          <article class="metric-card accent-green"><div class="metric-icon"><i data-lucide="calendar-check-2"></i></div><div><span>Today's sessions</span><strong>04</strong><small>2 completed <b>+1</b></small></div><i class="metric-arrow" data-lucide="arrow-up-right"></i></article>
+          <article class="metric-card accent-yellow"><div class="metric-icon"><i data-lucide="sparkles"></i></div><div><span>Prep briefs ready</span><strong>03</strong><small>For your next sessions</small></div><i class="metric-arrow" data-lucide="arrow-up-right"></i></article>
+          <article class="metric-card accent-coral"><div class="metric-icon"><i data-lucide="message-square-diff"></i></div><div><span>Needs your attention</span><strong>05</strong><small>Across 3 clients</small></div><i class="metric-arrow" data-lucide="arrow-up-right"></i></article>
+        </section>
+
+        <section class="dashboard-grid">
+          <article class="panel schedule-panel">
+            <div class="panel-heading"><div><p class="eyebrow">YOUR DAY</p><h2>Upcoming sessions</h2></div><button class="text-button" id="calendarButton">View calendar <i data-lucide="arrow-up-right"></i></button></div>
+            <div class="date-strip"><button class="date-control"><i data-lucide="chevron-left"></i></button><div class="date active"><b>21</b><span>WED</span></div><div class="date"><b>22</b><span>THU</span></div><div class="date"><b>23</b><span>FRI</span></div><div class="date"><b>24</b><span>SAT</span></div><button class="date-control"><i data-lucide="chevron-right"></i></button></div>
+            <div class="appointment-list">
+              <div class="appointment now"><div class="time"><strong>09:00</strong><span>50 min</span></div><div class="appointment-line"></div><div class="appointment-info"><div class="client-line"><div class="avatar avatar-lavender">SD</div><div><strong>Sarah Dlamini</strong><span>Workplace anxiety</span></div><span class="status-live">NOW</span></div><div class="appointment-meta"><span><i data-lucide="video"></i> Video session</span><button class="small-action" data-action="open session">Open session <i data-lucide="arrow-right"></i></button></div></div></div>
+              <div class="appointment"><div class="time"><strong>11:30</strong><span>50 min</span></div><div class="appointment-line"></div><div class="appointment-info"><div class="client-line"><div class="avatar avatar-blue">TM</div><div><strong>Thabo Mokoena</strong><span>General check-in</span></div></div><div class="appointment-meta"><span><i data-lucide="map-pin"></i> In person</span><button class="small-action" data-action="view prep">View prep <i data-lucide="arrow-right"></i></button></div></div></div>
+              <div class="appointment"><div class="time"><strong>14:00</strong><span>50 min</span></div><div class="appointment-line"></div><div class="appointment-info"><div class="client-line"><div class="avatar avatar-peach">LN</div><div><strong>Lerato Ndlovu</strong><span>Stress management</span></div></div><div class="appointment-meta"><span><i data-lucide="video"></i> Video session</span><button class="small-action" data-action="view prep">View prep <i data-lucide="arrow-right"></i></button></div></div></div>
+            </div>
+          </article>
+
+          <article class="panel brief-panel">
+            <div class="panel-heading"><div><p class="eyebrow">AI SESSION BRIEF</p><h2>Sarah Dlamini</h2></div><span class="ai-pill"><i data-lucide="sparkles"></i> Prepared</span></div>
+            <div class="focus-block"><span>Current focus</span><strong>Workplace anxiety</strong><div class="improving"><i data-lucide="trending-down"></i> Improving mood trend</div></div>
+            <div class="brief-columns"><div><span class="brief-label">ASSESSMENT CHANGES</span><p><strong>PHQ-9</strong> <b>15</b><i data-lucide="arrow-right"></i><mark>11</mark></p></div><div><span class="brief-label">LAST SESSION</span><p>7 days ago</p></div></div>
+            <div class="theme-row"><span class="brief-label">RECENT JOURNAL THEMES</span><div><span>Work stress</span><span>Sleep problems</span><span>Family pressure</span></div></div>
+            <div class="suggested"><span class="brief-label">SUGGESTED TOPICS</span><div class="suggestion"><span>01</span><strong>Boundary setting</strong><i data-lucide="arrow-up-right"></i></div><div class="suggestion"><span>02</span><strong>Burnout prevention</strong><i data-lucide="arrow-up-right"></i></div></div>
+            <button class="secondary-button full-width" id="briefButton"><i data-lucide="file-text"></i> Open full brief</button>
+          </article>
+        </section>
+
+        <section class="lower-grid">
+          <article class="panel chart-panel"><div class="panel-heading"><div><p class="eyebrow">CLIENT PROGRESS</p><h2>Mood & assessment trends</h2></div><button class="filter-button" id="trendFilter">Last 30 days <i data-lucide="chevron-down"></i></button></div><div class="chart-legend"><span><i class="legend-dot green"></i> Mood</span><span><i class="legend-dot coral"></i> Anxiety</span></div><div class="chart-area"><div class="y-labels"><span>10</span><span>8</span><span>6</span><span>4</span><span>2</span></div><div class="chart-content"><div class="grid-lines"><i></i><i></i><i></i><i></i><i></i></div><div class="trend-line mood"><span style="--x:0;--y:72"></span><span style="--x:14;--y:65"></span><span style="--x:28;--y:71"></span><span style="--x:42;--y:48"></span><span style="--x:56;--y:53"></span><span style="--x:70;--y:30"></span><span style="--x:84;--y:36"></span><span style="--x:98;--y:19"></span></div><div class="trend-line anxiety"><span style="--x:0;--y:32"></span><span style="--x:14;--y:39"></span><span style="--x:28;--y:26"></span><span style="--x:42;--y:46"></span><span style="--x:56;--y:40"></span><span style="--x:70;--y:58"></span><span style="--x:84;--y:51"></span><span style="--x:98;--y:67"></span></div><div class="x-labels"><span>JUL 22</span><span>JUL 29</span><span>AUG 05</span><span>AUG 12</span><span>AUG 21</span></div></div></div></article>
+          <article class="panel attention-panel"><div class="panel-heading"><div><p class="eyebrow">AI SIGNALS</p><h2>Worth a look</h2></div><button class="icon-button subtle" aria-label="More signals"><i data-lucide="more-horizontal"></i></button></div><div class="signal-item"><div class="signal-icon coral"><i data-lucide="message-circle-warning"></i></div><div><strong>Unanswered message</strong><p>Michael sent a message 2 days ago.</p></div><button class="arrow-button" data-action="open message"><i data-lucide="arrow-up-right"></i></button></div><div class="signal-item"><div class="signal-icon yellow"><i data-lucide="clipboard-list"></i></div><div><strong>Assessment due</strong><p>GAD-7 for Naledi is ready.</p></div><button class="arrow-button" data-action="open assessment"><i data-lucide="arrow-up-right"></i></button></div><div class="signal-item"><div class="signal-icon green"><i data-lucide="circle-check"></i></div><div><strong>Progress milestone</strong><p>Amara completed a treatment goal.</p></div><button class="arrow-button" data-action="view progress"><i data-lucide="arrow-up-right"></i></button></div></article>
+        </section>
+        <footer><span><i data-lucide="lock-keyhole"></i> Your practice data is encrypted and secure</span><span>TherapyFlow <b>·</b> v1.0</span></footer>
+      </div>
+    </main>
+  </div>
+  <div class="toast" id="toast" role="status"><i data-lucide="check-circle-2"></i><span>Action complete</span></div>
+  <div class="overlay" id="overlay"></div>
+  <script src="app.js"></script>
+</body>
+</html>
