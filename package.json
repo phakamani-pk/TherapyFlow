@@ -1,0 +1,9 @@
+{
+  "name": "therapyflow",
+  "version": "0.2.0",
+  "private": true,
+  "description": "TherapyFlow clinical practice and patient engagement prototype",
+  "scripts": {
+    "start": "node server.js"
+  }
+}
