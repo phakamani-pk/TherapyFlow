@@ -1,0 +1,43 @@
+{
+  "clients": [
+    {
+      "id": 1,
+      "name": "Sarah Dlamini",
+      "focus": "Workplace anxiety",
+      "status": "Active",
+      "mood": 7,
+      "goal": "Set healthier work boundaries",
+      "consent": "Received"
+    },
+    {
+      "id": 2,
+      "name": "Thabo Mokoena",
+      "focus": "General check-in",
+      "status": "Active",
+      "mood": 6,
+      "goal": "Build a consistent sleep routine"
+    },
+    {
+      "id": 3,
+      "name": "Lerato Ndlovu",
+      "focus": "Stress management",
+      "status": "Active",
+      "mood": 5,
+      "goal": "Practice grounding techniques"
+    }
+  ],
+  "moodEntries": [],
+  "journalEntries": [
+    {
+      "text": "Backend API smoke test",
+      "theme": "Testing",
+      "clientId": 1,
+      "id": "e9b47f78-d19c-4159-ab1e-6f1c8442bd27",
+      "createdAt": "2026-08-22T07:07:02.796Z"
+    }
+  ],
+  "assessments": [],
+  "sessions": [],
+  "appointments": [],
+  "messages": []
+}
