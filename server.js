@@ -7,14 +7,7 @@ const database = require('./database');
 const port = Number(process.env.PORT || 4173);
 const host = process.env.HOST || '127.0.0.1';
 const secret = process.env.THERAPYFLOW_SESSION_SECRET || 'development-only-change-me';
-const demoPassword = process.env.THERAPYFLOW_DEMO_PASSWORD || 'demo-password';
-const passwordSalt = process.env.THERAPYFLOW_PASSWORD_SALT || 'therapyflow-development-salt';
-const passwordHash = process.env.THERAPYFLOW_DEMO_PASSWORD_HASH || crypto.scryptSync(demoPassword, passwordSalt, 32).toString('hex');
 const loginAttempts = new Map();
-const users = {
-  therapist: { id: 'therapist-1', role: 'therapist', name: 'Dr. Nyawose' },
-  sarah: { id: 'client-1', role: 'client', name: 'Sarah Dlamini', clientId: 1 }
-};
 const collectionKeys = { moods: 'moodEntries', journals: 'journalEntries', assessments: 'assessments', sessions: 'sessions', appointments: 'appointments', messages: 'messages' };
 
 function tokenFor(user) {
@@ -69,7 +62,7 @@ const server = http.createServer(async (request, response) => {
   if (request.method === 'OPTIONS') { response.writeHead(204, { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type, Authorization', 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS' }); return response.end(); }
   if (url.pathname === '/api/health' && request.method === 'GET') return send(response, 200, { ok: true, service: 'therapyflow-api' });
   if (url.pathname === '/api/auth/login' && request.method === 'POST') {
-    try { const address = request.socket.remoteAddress || 'unknown'; const attempts = loginAttempts.get(address) || { count: 0, started: Date.now() }; if (Date.now() - attempts.started > 15 * 60 * 1000) { attempts.count = 0; attempts.started = Date.now(); } if (attempts.count >= 10) return send(response, 429, { error: 'Too many login attempts. Try again later.' }); const body = await readBody(request); const user = users[String(body.username || '').toLowerCase()]; const suppliedHash = crypto.scryptSync(String(body.password || ''), passwordSalt, 32).toString('hex'); const validPassword = suppliedHash.length === passwordHash.length && crypto.timingSafeEqual(Buffer.from(suppliedHash), Buffer.from(passwordHash)); if (!user || !validPassword) { attempts.count += 1; loginAttempts.set(address, attempts); return send(response, 401, { error: 'Invalid credentials' }); } loginAttempts.delete(address); return send(response, 200, { token: tokenFor(user), user }); } catch (error) { return send(response, 400, { error: error.message }); }
+    try { const address = request.socket.remoteAddress || 'unknown'; const attempts = loginAttempts.get(address) || { count: 0, started: Date.now() }; if (Date.now() - attempts.started > 15 * 60 * 1000) { attempts.count = 0; attempts.started = Date.now(); } if (attempts.count >= 10) return send(response, 429, { error: 'Too many login attempts. Try again later.' }); const body = await readBody(request); const user = database.authenticateUser(body.username, body.password); if (!user) { attempts.count += 1; loginAttempts.set(address, attempts); return send(response, 401, { error: 'Invalid credentials' }); } loginAttempts.delete(address); return send(response, 200, { token: tokenFor(user), user }); } catch (error) { return send(response, 400, { error: error.message }); }
   }
   const user = userFromRequest(request);
   if (!user) return send(response, 401, { error: 'Authentication required' });
