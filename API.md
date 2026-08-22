@@ -9,7 +9,7 @@ The prototype has two demo accounts. Both use the password `demo-password`:
 - Therapist: `therapist`
 - Client: `sarah`
 
-Set `THERAPYFLOW_SESSION_SECRET` in a real environment. The fallback secret is for local development only.
+Set `THERAPYFLOW_SESSION_SECRET`, `THERAPYFLOW_PASSWORD_SALT`, and `THERAPYFLOW_DEMO_PASSWORD_HASH` in a real environment. The fallback values are for local development only. Login attempts are throttled after ten failures per client address within a fifteen-minute window.
 
 ## Endpoints
 
