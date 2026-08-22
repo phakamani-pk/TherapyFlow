@@ -2,26 +2,16 @@ const http = require('http');
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
+const database = require('./database');
 
 const port = Number(process.env.PORT || 4173);
 const host = process.env.HOST || '127.0.0.1';
-const dataPath = path.join(__dirname, 'data.json');
 const secret = process.env.THERAPYFLOW_SESSION_SECRET || 'development-only-change-me';
 const users = {
   therapist: { id: 'therapist-1', role: 'therapist', name: 'Dr. Nyawose' },
   sarah: { id: 'client-1', role: 'client', name: 'Sarah Dlamini', clientId: 1 }
 };
 const collectionKeys = { moods: 'moodEntries', journals: 'journalEntries', assessments: 'assessments', sessions: 'sessions', appointments: 'appointments', messages: 'messages' };
-
-function readData() {
-  return JSON.parse(fs.readFileSync(dataPath, 'utf8'));
-}
-
-function writeData(data) {
-  const temporaryPath = `${dataPath}.tmp`;
-  fs.writeFileSync(temporaryPath, JSON.stringify(data, null, 2));
-  fs.renameSync(temporaryPath, dataPath);
-}
 
 function tokenFor(user) {
   const payload = Buffer.from(JSON.stringify({ ...user, exp: Date.now() + 8 * 60 * 60 * 1000 })).toString('base64url');
@@ -79,12 +69,11 @@ const server = http.createServer(async (request, response) => {
   }
   const user = userFromRequest(request);
   if (!user) return send(response, 401, { error: 'Authentication required' });
-  const data = readData();
   if (url.pathname === '/api/me' && request.method === 'GET') return send(response, 200, { user });
-  if (url.pathname === '/api/clients' && request.method === 'GET') return send(response, 200, { clients: user.role === 'therapist' ? data.clients : data.clients.filter((client) => client.id === user.clientId) });
+  if (url.pathname === '/api/clients' && request.method === 'GET') return send(response, 200, { clients: database.clientsForUser(user) });
   const match = url.pathname.match(/^\/api\/clients\/(\d+)\/(moods|journals|assessments|sessions|appointments|messages)$/);
-  if (match && request.method === 'GET') { const [, clientId, collection] = match; if (!allowed(user, clientId)) return send(response, 403, { error: 'Forbidden' }); const key = collectionKeys[collection]; return send(response, 200, { [collection]: data[key].filter((item) => Number(item.clientId) === Number(clientId)) }); }
-  if (match && request.method === 'POST') { const [, clientId, collection] = match; if (!allowed(user, clientId)) return send(response, 403, { error: 'Forbidden' }); try { const body = await readBody(request); const record = { ...body, clientId: Number(clientId), id: crypto.randomUUID(), createdAt: new Date().toISOString() }; data[collectionKeys[collection]].push(record); writeData(data); return send(response, 201, record); } catch (error) { return send(response, 400, { error: error.message }); } }
+  if (match && request.method === 'GET') { const [, clientId, collection] = match; if (!allowed(user, clientId)) return send(response, 403, { error: 'Forbidden' }); return send(response, 200, { [collection]: database.recordsForClient(collection, clientId) }); }
+  if (match && request.method === 'POST') { const [, clientId, collection] = match; if (!allowed(user, clientId)) return send(response, 403, { error: 'Forbidden' }); try { const body = await readBody(request); const record = database.addRecord(collection, clientId, body, crypto.randomUUID(), new Date().toISOString()); return send(response, 201, record); } catch (error) { return send(response, 400, { error: error.message }); } }
   return send(response, 404, { error: 'API route not found' });
 });
 

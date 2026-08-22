@@ -27,4 +27,4 @@ Authorization: Bearer <token>
 Content-Type: application/json
 ```
 
-The current `data.json` store is a development persistence layer. It must be replaced with an encrypted database and object storage before handling real clinical data.
+The development server uses Node's built-in SQLite support and persists to `therapyflow.db`. `data.json` is used only to seed a fresh database. This storage is not yet suitable for real clinical data; production requires encrypted storage, managed backups, audit logs, and a reviewed deployment of the database runtime.
