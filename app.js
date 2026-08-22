@@ -1,9 +1,30 @@
 const sidebar = document.querySelector('#sidebar');
 const overlay = document.querySelector('#overlay');
 const toast = document.querySelector('#toast');
+const contentWrap = document.querySelector('.content-wrap');
+const storageKey = 'therapyflow-data';
 let toastTimer;
 
+const defaultData = {
+  clients: [
+    { id: 1, name: 'Sarah Dlamini', focus: 'Workplace anxiety', status: 'Active', mood: 7, goal: 'Set healthier work boundaries' },
+    { id: 2, name: 'Thabo Mokoena', focus: 'General check-in', status: 'Active', mood: 6, goal: 'Build a consistent sleep routine' },
+    { id: 3, name: 'Lerato Ndlovu', focus: 'Stress management', status: 'Active', mood: 5, goal: 'Practice grounding techniques' }
+  ],
+  moodEntries: [],
+  journalEntries: [],
+  assessments: [],
+  sessions: []
+};
+
+const data = JSON.parse(localStorage.getItem(storageKey) || 'null') || defaultData;
+data.appointments = data.appointments || [];
+data.messages = data.messages || [];
 lucide.createIcons();
+
+function saveData() {
+  localStorage.setItem(storageKey, JSON.stringify(data));
+}
 
 function showToast(message) {
   toast.querySelector('span').textContent = message;
@@ -17,35 +38,161 @@ function closeMenu() {
   overlay.classList.remove('show');
 }
 
-document.querySelector('#menuToggle').addEventListener('click', () => {
-  sidebar.classList.add('open');
-  overlay.classList.add('show');
-});
+function refreshIcons() {
+  lucide.createIcons();
+}
+
+function renderView(view) {
+  document.body.classList.remove('client-mode');
+  sidebar.hidden = false;
+  sidebar.removeAttribute('aria-hidden');
+  if (view === 'Overview') {
+    window.location.hash = '';
+    window.location.reload();
+    return;
+  }
+  const views = {
+    Clients: renderClients,
+    Sessions: renderSessions,
+    Assessments: renderAssessments,
+    Messages: renderMessages,
+    Calendar: renderCalendar,
+    Resources: renderResources,
+    Reports: renderReports,
+    Settings: renderSettings
+  };
+  const renderer = views[view] || renderClients;
+  contentWrap.innerHTML = `<section class="view-header"><div><p class="eyebrow">CLINICAL WORKSPACE</p><h1>${view}</h1><p class="subhead">A working space for connected care.</p></div><button class="primary-button" id="viewPrimary"><i data-lucide="plus"></i> ${view === 'Clients' ? 'Add client' : view === 'Sessions' ? 'New session' : 'Create new'}</button></section><div id="viewBody"></div>`;
+  renderer(document.querySelector('#viewBody'));
+  document.querySelector('#viewPrimary').addEventListener('click', () => view === 'Calendar' ? openAppointmentForm() : openForm(view));
+  refreshIcons();
+}
+
+function renderClients(root) {
+  root.innerHTML = `<section class="panel app-panel"><div class="panel-heading"><div><p class="eyebrow">${data.clients.length} ACTIVE RECORDS</p><h2>Client management hub</h2></div><span class="ai-pill"><i data-lucide="sparkles"></i> AI summaries ready</span></div><div class="client-list">${data.clients.map((client) => `<article class="client-row"><div class="avatar avatar-lavender">${client.name.split(' ').map((part) => part[0]).join('')}</div><div class="client-main"><strong>${client.name}</strong><span>${client.focus}</span><small>Goal: ${client.goal}</small></div><div class="client-score"><span>Mood</span><strong>${client.mood}/10</strong></div><button class="small-action" data-client="${client.id}">Open record <i data-lucide="arrow-right"></i></button></article>`).join('')}</div></section>`;
+  root.querySelectorAll('[data-client]').forEach((button) => button.addEventListener('click', () => openClient(Number(button.dataset.client))));
+}
+
+function openSarahBrief() {
+  const client = data.clients[0];
+  document.querySelectorAll('.nav-item').forEach((item) => item.classList.remove('active'));
+  renderView('Clients');
+  setTimeout(() => openClient(client.id), 0);
+}
+
+function openClient(id) {
+  const client = data.clients.find((item) => item.id === id);
+  const moodHistory = data.moodEntries.filter((entry) => entry.clientId === id).slice(-5).map((entry) => `<span>${entry.date}: ${entry.value}/10</span>`).join('') || '<span>No check-ins recorded yet</span>';
+  document.querySelector('#viewBody').innerHTML = `<section class="panel app-panel record-panel"><button class="text-button" id="backClients"><i data-lucide="arrow-left"></i> Back to clients</button><div class="record-heading"><div class="avatar avatar-lavender">${client.name.split(' ').map((part) => part[0]).join('')}</div><div><p class="eyebrow">CLIENT RECORD</p><h2>${client.name}</h2><p>${client.focus} · ${client.status}</p></div></div><div class="record-grid"><div><span class="brief-label">CURRENT GOAL</span><h3>${client.goal}</h3><button class="secondary-button" id="recordMood"><i data-lucide="heart-pulse"></i> Log mood</button></div><div><span class="brief-label">RECENT MOOD</span><div class="history-list">${moodHistory}</div></div><div><span class="brief-label">EMERGENCY CONTACT</span><h3>${client.emergency || 'Not recorded'}</h3></div><div><span class="brief-label">REFERRAL SOURCE</span><h3>${client.referral || 'Not recorded'}</h3></div><div><span class="brief-label">CONSENT FORMS</span><h3>${client.consent || 'Pending'}</h3></div><div><span class="brief-label">MEDICAL & PSYCHOLOGICAL HISTORY</span><p>${client.history || 'No history recorded'}</p></div></div><div class="record-actions"><button class="secondary-button" id="recordJournal"><i data-lucide="book-open"></i> Add journal insight</button><button class="secondary-button" id="recordNote"><i data-lucide="notebook-pen"></i> Write session note</button></div></section>`;
+  document.querySelector('#backClients').addEventListener('click', () => renderView('Clients'));
+  document.querySelector('#recordMood').addEventListener('click', () => openForm('Mood', client));
+  document.querySelector('#recordMood').insertAdjacentHTML('afterend', ' <button class="secondary-button" id="updateGoal"><i data-lucide="target"></i> Update goal</button>');
+  document.querySelector('#updateGoal').addEventListener('click', () => openGoalForm(client));
+  document.querySelector('#recordJournal').addEventListener('click', () => openForm('Journal', client));
+  document.querySelector('#recordNote').addEventListener('click', () => openForm('Note', client));
+  const documentPanel = document.createElement('div'); documentPanel.className = 'document-panel'; documentPanel.innerHTML = `<span class="brief-label">SECURE DOCUMENTS</span><label class="secondary-button file-button"><i data-lucide="upload"></i> Upload document<input type="file" id="clientDocument"></label><div class="document-list">${(client.documents || []).map((document) => `<span><i data-lucide="file-text"></i> ${document}</span>`).join('') || '<small>No documents uploaded</small>'}</div>`; document.querySelector('.record-panel').appendChild(documentPanel); document.querySelector('#clientDocument').addEventListener('change', (event) => { const file = event.target.files[0]; if (!file) return; client.documents = client.documents || []; client.documents.push(file.name); saveData(); showToast('Document added to client record'); openClient(client.id); });
+  const timeline = document.createElement('div'); timeline.className = 'session-timeline'; const clientSessions = data.sessions.filter((session) => session.clientId === client.id).reverse(); timeline.innerHTML = `<span class="brief-label">SESSION HISTORY</span>${clientSessions.map((session) => `<article><strong>${session.date}</strong><p>${session.text.slice(0, 140)}${session.text.length > 140 ? '...' : ''}</p><small>${session.soap ? 'SOAP draft saved' : 'Session note saved'}</small></article>`).join('') || '<small>No sessions recorded yet</small>'}`; document.querySelector('.record-panel').appendChild(timeline);
+  const consentPanel = document.createElement('div'); consentPanel.className = 'consent-panel'; consentPanel.innerHTML = `<span><span class="brief-label">CONSENT STATUS</span><strong>${client.consent || 'Pending'}</strong></span><button class="secondary-button" id="toggleConsent">${client.consent === 'Received' ? 'Mark pending' : 'Mark received'}</button>`; document.querySelector('.record-panel').appendChild(consentPanel); document.querySelector('#toggleConsent').addEventListener('click', () => { client.consent = client.consent === 'Received' ? 'Pending' : 'Received'; saveData(); showToast(`Consent marked ${client.consent.toLowerCase()}`); openClient(client.id); });
+  const clientJournals = data.journalEntries.filter((entry) => entry.clientId === client.id).slice(-3).reverse(); const themes = [...new Set(clientJournals.map((entry) => entry.theme).filter(Boolean))]; const overview = document.createElement('div'); overview.className = 'ai-overview'; overview.innerHTML = `<div><span class="brief-label">AI CLIENT OVERVIEW</span><h3>${client.name} is working on ${client.focus.toLowerCase()}.</h3><p>Current goal: ${client.goal}. ${themes.length ? `Recent reflection themes include ${themes.join(', ').toLowerCase()}.` : 'No journal themes have been recorded yet.'}</p></div><i data-lucide="sparkles"></i><div class="journal-insights"><span class="brief-label">RECENT JOURNAL INSIGHTS</span>${clientJournals.map((entry) => `<article><strong>${entry.date}</strong><p>${entry.text || 'Photo reflection attached.'}</p></article>`).join('') || '<small>No journal insights recorded yet</small>'}</div>`; document.querySelector('.record-panel').appendChild(overview);
+  refreshIcons();
+}
+
+function renderSessions(root) {
+  root.innerHTML = `<section class="panel app-panel session-workspace"><div class="panel-heading"><div><p class="eyebrow">AI SESSION WORKSPACE</p><h2>Capture a meaningful session</h2></div><span class="ai-pill"><i data-lucide="sparkles"></i> Draft assistant</span></div><div class="session-toolbar"><label>Client<select id="sessionClient">${data.clients.map((client) => `<option value="${client.id}">${client.name}</option>`).join('')}</select></label><div class="session-context" id="sessionContext"></div></div><div class="session-editor"><div><label class="editor-label">Live session notes<textarea id="liveNotes" placeholder="Capture themes, observations, interventions, and next steps..."></textarea></label><div class="editor-actions"><button class="secondary-button" id="voiceNotes"><i data-lucide="mic"></i> Start voice notes</button><span id="voiceStatus">Text stays on this device.</span></div></div><div class="soap-panel"><div class="panel-heading"><div><span class="brief-label">AI DRAFT</span><h3>SOAP note</h3></div><button class="small-action" id="generateSoap"><i data-lucide="wand-sparkles"></i> Generate</button></div><div id="soapDraft" class="soap-draft"><p>Add session notes, then generate a structured draft.</p></div></div></div><div class="session-footer"><span id="sessionSaved"></span><button class="primary-button" id="saveSession"><i data-lucide="save"></i> Save session</button></div></section>`;
+  const clientSelect = root.querySelector('#sessionClient');
+  const notes = root.querySelector('#liveNotes');
+  const context = root.querySelector('#sessionContext');
+  const draft = root.querySelector('#soapDraft');
+  const selectedClient = () => data.clients.find((client) => client.id === Number(clientSelect.value));
+  const updateContext = () => { const client = selectedClient(); const previous = data.sessions.filter((session) => session.clientId === client.id).slice(-1)[0]; context.innerHTML = `<strong>${client.focus}</strong><span>Goal: ${client.goal}</span><small>${previous ? `Previous note saved ${previous.date}` : 'No previous session note yet'}</small>`; };
+  const generateSoap = () => { const client = selectedClient(); const text = notes.value.trim(); if (!text) { showToast('Add notes before generating a SOAP draft'); return; } const themes = text.split(/[.!?]/).map((part) => part.trim()).filter(Boolean).slice(0, 3).join('; '); draft.innerHTML = `<p><strong>Subjective:</strong> Client discussed ${themes || 'the concerns recorded in session'}.</p><p><strong>Objective:</strong> Presentation and engagement documented by clinician.</p><p><strong>Assessment:</strong> Session focus remains ${client.focus.toLowerCase()}; continue monitoring mood and functioning.</p><p><strong>Plan:</strong> Review ${client.goal.toLowerCase()} and agree on one follow-up action next session.</p>`; showToast('SOAP draft generated for review'); };
+  clientSelect.addEventListener('change', updateContext); root.querySelector('#generateSoap').addEventListener('click', generateSoap); updateContext();
+  root.querySelector('#saveSession').addEventListener('click', () => { if (!notes.value.trim()) { showToast('Add session notes before saving'); return; } const client = selectedClient(); data.sessions.push({ clientId: client.id, text: notes.value.trim(), soap: draft.textContent.trim(), date: new Date().toLocaleDateString('en-GB') }); saveData(); root.querySelector('#sessionSaved').textContent = 'Saved locally just now'; showToast('Session note saved securely in this browser'); updateContext(); });
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  root.querySelector('#voiceNotes').addEventListener('click', () => { if (!SpeechRecognition) { showToast('Voice transcription is not supported in this browser'); return; } const recognition = new SpeechRecognition(); recognition.continuous = true; recognition.interimResults = false; recognition.onstart = () => { root.querySelector('#voiceStatus').textContent = 'Listening...'; root.querySelector('#voiceNotes').classList.add('recording'); }; recognition.onresult = (event) => { notes.value += `${Array.from(event.results).slice(event.resultIndex).map((result) => result[0].transcript).join(' ')} `; }; recognition.onerror = () => { root.querySelector('#voiceStatus').textContent = 'Voice input stopped'; }; recognition.onend = () => { root.querySelector('#voiceStatus').textContent = 'Text stays on this device.'; root.querySelector('#voiceNotes').classList.remove('recording'); }; recognition.start(); });
+}
+const assessmentQuestions = {
+  'PHQ-9': ['Little interest or pleasure in doing things', 'Feeling down, depressed, or hopeless', 'Trouble falling or staying asleep', 'Feeling tired or having little energy', 'Poor appetite or overeating', 'Feeling bad about yourself', 'Trouble concentrating', 'Moving or speaking slowly or feeling restless', 'Thoughts that you would be better off dead'],
+  'GAD-7': ['Feeling nervous, anxious, or on edge', 'Not being able to stop or control worrying', 'Worrying too much about different things', 'Trouble relaxing', 'Being so restless it is hard to sit still', 'Becoming easily annoyed or irritable', 'Feeling afraid as if something awful might happen'],
+  'Burnout Assessment': ['Feeling emotionally exhausted', 'Feeling detached from work or study', 'Difficulty recovering after demands', 'Feeling less effective than usual', 'Feeling cynical or negative'],
+  'Stress Assessment': ['Finding it hard to unwind', 'Feeling unable to cope', 'Feeling tense or worried', 'Feeling overwhelmed by responsibilities', 'Having difficulty focusing'],
+  'Wellness Check-in': ['Feeling positive about the day', 'Having enough energy', 'Feeling connected to others', 'Sleeping well', 'Feeling able to manage challenges']
+};
+
+function renderAssessments(root) { root.innerHTML = `<section class="panel app-panel"><div class="panel-heading"><div><p class="eyebrow">SCREENING & MONITORING</p><h2>Assessment center</h2></div><span class="ai-pill"><i data-lucide="sparkles"></i> Automatic scoring</span></div><p class="subhead">Complete a structured check-in for a client and save the score to their progress record.</p><div class="assessment-grid">${Object.keys(assessmentQuestions).map((name) => `<button class="assessment-card" data-assessment="${name}"><i data-lucide="clipboard-check"></i><strong>${name}</strong><span>${assessmentQuestions[name].length} questions <i data-lucide="arrow-up-right"></i></span></button>`).join('')}</div></section>`; root.querySelectorAll('[data-assessment]').forEach((button) => button.addEventListener('click', () => openForm('Assessment', { assessment: button.dataset.assessment }))); }
+function renderMessages(root) { root.innerHTML = `<section class="panel app-panel"><div class="panel-heading"><div><p class="eyebrow">SECURE COMMUNICATION</p><h2>Messages</h2></div></div><div class="message-row"><div class="signal-icon coral"><i data-lucide="message-circle-warning"></i></div><div><strong>Michael sent a message 2 days ago</strong><p>“I have been feeling overwhelmed at work again.”</p></div><button class="secondary-button" id="replyMessage">Reply</button></div><div class="empty-state compact"><i data-lucide="shield-check"></i><p>Messages stay in this browser until a secure backend is connected.</p></div></section>`; root.querySelector('#replyMessage').addEventListener('click', () => openForm('Message', { name: 'Michael' })); }
+function renderCalendar(root) { const booked = data.appointments.map((appointment) => { const client = data.clients.find((item) => item.id === appointment.clientId); return `<div class="calendar-item"><strong>${appointment.time}</strong><span>${client?.name || 'Client'}<small>${appointment.date} · ${appointment.type}</small></span><button class="small-action" data-calendar="${appointment.clientId}">Prepare <i data-lucide="arrow-right"></i></button></div>`; }).join(''); root.innerHTML = `<section class="panel app-panel"><div class="panel-heading"><div><p class="eyebrow">PRACTICE ADMINISTRATION</p><h2>Appointment calendar</h2></div><span class="ai-pill"><i data-lucide="calendar-check-2"></i> ${data.appointments.length} booked locally</span></div><div class="calendar-list">${booked || '<div class="empty-state compact"><p>No new appointments booked yet.</p></div>'}</div></section>`; root.querySelectorAll('[data-calendar]').forEach((button) => button.addEventListener('click', () => openClient(Number(button.dataset.calendar)))); }
+function renderResources(root) { root.innerHTML = `<section class="panel app-panel"><div class="panel-heading"><div><p class="eyebrow">THERAPIST-CURATED</p><h2>Resource library</h2></div></div><div class="resource-grid">${['Breathing reset','Boundary setting','Sleep routine','Grounding practice'].map((name, index) => `<article class="resource-card"><span>0${index + 1}</span><h3>${name}</h3><p>Share a practical exercise with a client.</p><button class="small-action" data-resource="${name}">Add to plan <i data-lucide="arrow-right"></i></button></article>`).join('')}</div></section>`; root.querySelectorAll('[data-resource]').forEach((button) => button.addEventListener('click', () => showToast(`${button.dataset.resource} added to resource plan`))); }
+function renderReports(root) { const average = (key) => { const values = data.moodEntries.map((entry) => Number(entry[key])).filter((value) => Number.isFinite(value)); return values.length ? (values.reduce((total, value) => total + value, 0) / values.length).toFixed(1) : '—'; }; const moodAverage = average('mood'); const anxietyAverage = average('anxiety'); const sleepAverage = average('sleep'); const signal = moodAverage === '—' ? 'Record more check-ins to identify patterns.' : Number(moodAverage) >= Number(anxietyAverage) ? 'Mood is currently tracking above anxiety.' : 'Anxiety is a useful focus for the next review.'; root.innerHTML = `<section class="panel app-panel"><div class="panel-heading"><div><p class="eyebrow">TREATMENT PROGRESS</p><h2>Practice reports</h2></div><span class="ai-pill"><i data-lucide="sparkles"></i> Pattern analysis</span></div><div class="report-metrics"><div><span>Average mood</span><strong>${moodAverage}<small>/10</small></strong></div><div><span>Average anxiety</span><strong>${anxietyAverage}<small>/10</small></strong></div><div><span>Average sleep</span><strong>${sleepAverage}<small>/10</small></strong></div><div><span>Journal engagement</span><strong>${data.journalEntries.length}</strong><small> reflections saved</small></div><div><span>Assessments completed</span><strong>${data.assessments.length}</strong><small> scored records</small></div><div><span>Session notes</span><strong>${data.sessions.length}</strong><small> saved records</small></div></div><div class="insight-banner"><i data-lucide="lightbulb"></i><div><strong>Practice insight</strong><p>${signal}</p></div></div></section>`; }
+function renderSettings(root) { root.innerHTML = `<section class="panel app-panel"><div class="panel-heading"><div><p class="eyebrow">PRACTICE SETTINGS</p><h2>Local workspace</h2></div></div><div class="settings-row"><div><strong>Data storage</strong><p>Your demo records are stored locally in this browser.</p></div><button class="secondary-button" id="clearData">Reset demo data</button></div></section>`; root.querySelector('#clearData').addEventListener('click', () => { localStorage.removeItem(storageKey); showToast('Demo data reset'); setTimeout(() => window.location.reload(), 400); }); }
+function renderPortal() {
+  const client = data.clients[0];
+  const clientMoods = data.moodEntries.filter((entry) => entry.clientId === client.id).slice(-7);
+  const moodSummary = clientMoods.length ? clientMoods.map((entry) => `<span style="height:${Math.max(18, Number(entry.value) * 10)}%" title="${entry.date}: ${entry.value}/10"></span>`).join('') : '<span style="height:38%" title="No check-in yet"></span><span style="height:52%" title="No check-in yet"></span><span style="height:44%" title="No check-in yet"></span>';
+  const latestAssessment = data.assessments.filter((assessment) => assessment.clientId === client.id).slice(-1)[0];
+  document.body.classList.add('client-mode');
+  sidebar.hidden = true;
+  sidebar.setAttribute('aria-hidden', 'true');
+  document.querySelectorAll('.nav-item').forEach((item) => item.classList.remove('active'));
+  contentWrap.innerHTML = `<section class="view-header"><div><p class="eyebrow">PERSONAL WELLNESS</p><h1>Welcome back, ${client.name.split(' ')[0]}.</h1><p class="subhead">A private space for noticing, reflecting, and preparing.</p></div><button class="primary-button" id="portalMood"><i data-lucide="heart-pulse"></i> Check in</button></section><section class="portal-grid"><article class="panel portal-card mood-card"><p class="eyebrow">TODAY'S MOOD</p><strong>${clientMoods.slice(-1)[0]?.value || client.mood}/10</strong><p>Keep noticing what changes throughout your day.</p><div class="mood-dots"><span></span><span></span><span class="selected"></span><span></span><span></span></div></article><article class="panel portal-card"><p class="eyebrow">NEXT APPOINTMENT</p><h2>Today · 09:00</h2><p>Video session with Dr. Nyawose</p><button class="secondary-button" id="joinSession"><i data-lucide="video"></i> Join session</button></article><article class="panel portal-card portal-wide"><div class="panel-heading"><div><p class="eyebrow">MOOD TREND</p><h2>Your recent check-ins</h2></div><span class="ai-pill"><i data-lucide="sparkles"></i> Pattern ready</span></div><div class="mood-chart">${moodSummary}</div><div class="chart-caption"><span>Older</span><span>Recent</span></div></article><article class="panel portal-card portal-wide"><div class="panel-heading"><div><p class="eyebrow">AI WELLNESS COMPANION</p><h2>A moment to check in</h2></div><span class="ai-pill"><i data-lucide="shield-check"></i> Supportive, not diagnostic</span></div><p id="companionReply">I’m here to help you notice patterns and choose a small next step. What has been present for you today?</p><div class="companion-input"><input id="companionInput" placeholder="I have been feeling..." aria-label="Message wellness companion"><button class="secondary-button" id="companionSend"><i data-lucide="send"></i> Share</button></div></article><article class="panel portal-card portal-wide"><div class="panel-heading"><div><p class="eyebrow">GUIDED REFLECTION</p><h2>How are things feeling?</h2></div><i data-lucide="book-open"></i></div><textarea id="portalJournal" placeholder="Write a few words about today..."></textarea><div class="journal-tools"><button class="secondary-button" id="voiceJournal"><i data-lucide="mic"></i> Record voice note</button><label class="secondary-button file-button"><i data-lucide="image-plus"></i> Add photo<input type="file" id="journalPhoto" accept="image/*"></label><span id="journalAttachment"></span></div><button class="secondary-button" id="savePortalJournal">Save reflection</button></article><article class="panel portal-card"><p class="eyebrow">CURRENT GOAL</p><h2>${client.goal}</h2><div class="progress-track"><span style="width:62%"></span></div><small>62% this month</small></article><article class="panel portal-card"><p class="eyebrow">ASSESSMENT PORTAL</p><h2>${latestAssessment ? `${latestAssessment.type}: ${latestAssessment.score}` : 'Complete a check-in'}</h2><p>Share a structured wellness update before your next appointment.</p><button class="secondary-button" id="portalAssessment"><i data-lucide="clipboard-check"></i> Start assessment</button></article><article class="panel portal-card"><p class="eyebrow">RECOMMENDED RESOURCE</p><h2>Boundary setting</h2><p>A short practice for protecting recovery time after work.</p><button class="text-button" id="openResource">Read resource <i data-lucide="arrow-up-right"></i></button></article></section>`;
+  refreshIcons();
+  document.querySelector('.progress-track span').style.width = `${client.goalProgress || 62}%`;
+  document.querySelector('#portalMood').addEventListener('click', () => openForm('Mood', client));
+  document.querySelector('#portalAssessment').addEventListener('click', () => openForm('Assessment', { assessment: 'Wellness Check-in' }));
+  document.querySelector('#companionSend').addEventListener('click', () => { const input = document.querySelector('#companionInput'); const message = input.value.trim(); if (!message) return showToast('Share a thought first'); const lowerMessage = message.toLowerCase(); const response = lowerMessage.includes('overwhelm') || lowerMessage.includes('stress') ? 'It sounds like there is a lot competing for your attention. Would writing down one contributing factor help you prepare for your next session?' : lowerMessage.includes('sleep') ? 'Sleep can affect how the whole day feels. You could note when your energy changes and bring that observation to Dr. Nyawose.' : 'Thank you for noticing that. You could capture what happened, how you felt, and what helped, even briefly.'; document.querySelector('#companionReply').textContent = response; input.value = ''; });
+  document.querySelector('#joinSession').addEventListener('click', () => showToast('Secure session room opened'));
+  document.querySelector('#joinSession').insertAdjacentHTML('afterend', ' <button class="text-button" id="requestAppointment">Request another time <i data-lucide="calendar-plus"></i></button>');
+  document.querySelector('#requestAppointment').addEventListener('click', () => openPatientAppointmentForm(client));
+  document.querySelector('#openResource').addEventListener('click', () => showToast('Resource opened'));
+  let journalPhoto = '';
+  document.querySelector('#journalPhoto').addEventListener('change', (event) => { const file = event.target.files[0]; if (file) { journalPhoto = file.name; document.querySelector('#journalAttachment').textContent = file.name; } });
+  document.querySelector('#voiceJournal').addEventListener('click', () => { const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition; if (!SpeechRecognition) return showToast('Voice transcription is not supported in this browser'); const recognition = new SpeechRecognition(); recognition.onresult = (event) => { document.querySelector('#portalJournal').value += `${event.results[0][0].transcript} `; showToast('Voice note added to reflection'); }; recognition.start(); });
+  document.querySelector('#savePortalJournal').addEventListener('click', () => { const text = document.querySelector('#portalJournal').value.trim(); if (!text && !journalPhoto) return showToast('Write or attach something first'); data.journalEntries.push({ clientId: client.id, text, theme: 'Self reflection', photo: journalPhoto, date: new Date().toLocaleDateString('en-GB') }); saveData(); document.querySelector('#portalJournal').value = ''; document.querySelector('#journalAttachment').textContent = ''; showToast('Reflection saved privately'); });
+}
+
+function openPatientAppointmentForm(client) {
+  const modal = document.createElement('div');
+  modal.className = 'modal-backdrop';
+  modal.innerHTML = `<form class="modal" id="patientAppointmentForm"><button type="button" class="icon-button modal-close" aria-label="Close"><i data-lucide="x"></i></button><p class="eyebrow">APPOINTMENTS</p><h2>Request a session</h2><p class="assessment-instruction">Choose a preferred time for your next session with Dr. Nyawose.</p><label>Date<input type="date" name="date" required></label><label>Time<input type="time" name="time" required></label><label>Session type<select name="type"><option>Video session</option><option>In person</option></select></label><button class="primary-button" type="submit">Send request</button></form>`;
+  document.body.appendChild(modal);
+  refreshIcons();
+  modal.querySelector('.modal-close').addEventListener('click', () => modal.remove());
+  modal.addEventListener('click', (event) => { if (event.target === modal) modal.remove(); });
+  modal.querySelector('#patientAppointmentForm').addEventListener('submit', (event) => { event.preventDefault(); const formData = new FormData(event.currentTarget); data.appointments.push({ clientId: client.id, date: formData.get('date'), time: formData.get('time'), type: formData.get('type'), requested: true }); saveData(); modal.remove(); showToast('Appointment request sent'); });
+}
+
+function openAppointmentForm() {
+  const modal = document.createElement('div');
+  modal.className = 'modal-backdrop';
+  modal.innerHTML = `<form class="modal" id="appointmentForm"><button type="button" class="icon-button modal-close" aria-label="Close"><i data-lucide="x"></i></button><p class="eyebrow">CALENDAR</p><h2>Book an appointment</h2><label>Client<select name="clientId">${data.clients.map((client) => `<option value="${client.id}">${client.name}</option>`).join('')}</select></label><label>Date<input type="date" name="date" required></label><label>Time<input type="time" name="time" required></label><label>Session type<select name="type"><option>Video session</option><option>In person</option></select></label><button class="primary-button" type="submit">Book appointment</button></form>`;
+  document.body.appendChild(modal);
+  refreshIcons();
+  modal.querySelector('.modal-close').addEventListener('click', () => modal.remove());
+  modal.addEventListener('click', (event) => { if (event.target === modal) modal.remove(); });
+  modal.querySelector('#appointmentForm').addEventListener('submit', (event) => { event.preventDefault(); const formData = new FormData(event.currentTarget); data.appointments.push({ clientId: Number(formData.get('clientId')), date: formData.get('date'), time: formData.get('time'), type: formData.get('type') }); saveData(); modal.remove(); showToast('Appointment booked locally'); renderView('Calendar'); });
+}
+
+function openGoalForm(client) {
+  const modal = document.createElement('div'); modal.className = 'modal-backdrop'; modal.innerHTML = `<form class="modal" id="goalForm"><button type="button" class="icon-button modal-close" aria-label="Close"><i data-lucide="x"></i></button><p class="eyebrow">TREATMENT PLAN</p><h2>Update ${client.name}'s goal</h2><label>Current goal<input name="goal" value="${client.goal}" required></label><label>Progress<input type="range" name="progress" min="0" max="100" value="${client.goalProgress || 62}"><output>${client.goalProgress || 62}%</output></label><label>Next step<textarea name="nextStep" placeholder="What will you work on next?"></textarea></label><button class="primary-button" type="submit">Save treatment plan</button></form>`; document.body.appendChild(modal); refreshIcons(); const range = modal.querySelector('input[type="range"]'); range.addEventListener('input', () => { modal.querySelector('output').textContent = `${range.value}%`; }); modal.querySelector('.modal-close').addEventListener('click', () => modal.remove()); modal.addEventListener('click', (event) => { if (event.target === modal) modal.remove(); }); modal.querySelector('#goalForm').addEventListener('submit', (event) => { event.preventDefault(); const formData = new FormData(event.currentTarget); client.goal = formData.get('goal'); client.goalProgress = Number(formData.get('progress')); client.nextStep = formData.get('nextStep'); saveData(); modal.remove(); showToast('Treatment plan updated'); openClient(client.id); });
+}
+
+function openForm(type, context = {}) {
+  const fields = type === 'Clients' ? `<label>Full name<input name="name" required placeholder="Client name"></label><label>Primary focus<input name="focus" required placeholder="Anxiety, stress, sleep..."></label><label>First treatment goal<input name="goal" required placeholder="A measurable goal"></label><label>Emergency contact<input name="emergency" placeholder="Name and phone"></label><label>Medical and psychological history<textarea name="history" placeholder="Relevant history"></textarea></label><label>Referral source<input name="referral" placeholder="GP, self-referral, colleague..."></label>` : type === 'Mood' ? `<p class="assessment-instruction">Rate each area from 1 (low) to 10 (strong).</p>${[['mood','Mood'],['stress','Stress'],['anxiety','Anxiety'],['energy','Energy'],['sleep','Sleep quality']].map(([key, label]) => `<label>${label}<input type="range" name="${key}" min="1" max="10" value="5"><output data-output="${key}">5/10</output></label>`).join('')}<label>What influenced it?<textarea name="note" placeholder="Optional context"></textarea></label>` : type === 'Journal' ? `<label>Reflection<textarea name="text" required placeholder="What has been present for you?"></textarea></label><label>Theme<input name="theme" placeholder="Work stress, sleep, relationships..." required></label>` : type === 'Assessment' ? `<label>Client<select name="clientId">${data.clients.map((client) => `<option value="${client.id}">${client.name}</option>`).join('')}</select></label><p class="assessment-instruction">Over the last two weeks, how often have you experienced each item?</p>${assessmentQuestions[context.assessment].map((question, index) => `<label class="question"><span>${index + 1}. ${question}</span><select name="question${index}"><option value="0">Not at all</option><option value="1">Several days</option><option value="2">More than half the days</option><option value="3">Nearly every day</option></select></label>`).join('')}` : type === 'Message' ? `<label>Reply<textarea name="text" required placeholder="Write a secure reply..."></textarea></label>` : `<label>Client<select name="clientId">${data.clients.map((client) => `<option value="${client.id}">${client.name}</option>`).join('')}</select></label><label>Session notes<textarea name="text" required placeholder="Themes, observations, next steps..."></textarea></label>`;
+  const title = type === 'Clients' ? 'Add a client record' : type === 'Mood' ? `Log mood for ${context.name}` : type === 'Journal' ? `New journal insight for ${context.name}` : type === 'Assessment' ? context.assessment : type === 'Message' ? `Reply to ${context.name}` : 'New session note';
+  const modal = document.createElement('div'); modal.className = 'modal-backdrop'; modal.innerHTML = `<form class="modal" id="dataForm"><button type="button" class="icon-button modal-close" aria-label="Close"><i data-lucide="x"></i></button><p class="eyebrow">${type.toUpperCase()}</p><h2>${title}</h2>${fields}<button class="primary-button" type="submit">Save record</button></form>`; document.body.appendChild(modal); refreshIcons(); modal.querySelectorAll('input[type="range"]').forEach((input) => input.addEventListener('input', () => { modal.querySelector(`[data-output="${input.name}"]`).textContent = `${input.value}/10`; })); modal.querySelector('.modal-close').addEventListener('click', () => modal.remove()); modal.addEventListener('click', (event) => { if (event.target === modal) modal.remove(); }); modal.querySelector('form').addEventListener('submit', (event) => { event.preventDefault(); const formData = new FormData(event.currentTarget); const today = new Date().toLocaleDateString('en-GB'); if (type === 'Clients') data.clients.push({ id: Date.now(), name: formData.get('name'), focus: formData.get('focus'), goal: formData.get('goal'), emergency: formData.get('emergency'), history: formData.get('history'), referral: formData.get('referral'), consent: 'Pending', status: 'Active', mood: 5 }); if (type === 'Mood') data.moodEntries.push({ clientId: context.id, value: formData.get('mood'), mood: formData.get('mood'), stress: formData.get('stress'), anxiety: formData.get('anxiety'), energy: formData.get('energy'), sleep: formData.get('sleep'), date: today, note: formData.get('note') }); if (type === 'Journal') data.journalEntries.push({ clientId: context.id, text: formData.get('text'), theme: formData.get('theme'), date: today }); if (type === 'Assessment') { const score = assessmentQuestions[context.assessment].reduce((total, question, index) => total + Number(formData.get(`question${index}`)), 0); data.assessments.push({ clientId: Number(formData.get('clientId')), type: context.assessment, score, date: today }); } if (type === 'Note') data.sessions.push({ clientId: Number(formData.get('clientId')), text: formData.get('text'), date: today }); saveData(); modal.remove(); showToast(`${type === 'Clients' ? 'Client record' : type} saved securely in this browser`); if (type === 'Mood' || type === 'Journal') openClient(context.id); else renderView(type === 'Assessment' ? 'Assessments' : type === 'Clients' ? 'Clients' : 'Sessions'); });
+}
+
+document.querySelector('#menuToggle').addEventListener('click', () => { sidebar.classList.add('open'); overlay.classList.add('show'); });
 overlay.addEventListener('click', closeMenu);
-
-document.querySelectorAll('.nav-item[data-view]').forEach((item) => {
-  item.addEventListener('click', () => {
-    document.querySelectorAll('.nav-item').forEach((navItem) => navItem.classList.remove('active'));
-    item.classList.add('active');
-    showToast(`${item.dataset.view} workspace selected`);
-    closeMenu();
-  });
-});
-
-document.querySelectorAll('[data-action]').forEach((button) => {
-  button.addEventListener('click', () => showToast(`${button.dataset.action[0].toUpperCase()}${button.dataset.action.slice(1)} opened`));
-});
-
-document.querySelector('#newSession').addEventListener('click', () => showToast('New session draft created'));
-document.querySelector('#calendarButton').addEventListener('click', () => showToast('Calendar view opened'));
-document.querySelector('#briefButton').addEventListener('click', () => showToast('Full AI brief opened'));
-document.querySelector('#searchButton').addEventListener('click', () => showToast('Search is ready for clients and notes'));
-
-document.querySelector('#trendFilter').addEventListener('click', (event) => {
-  const button = event.currentTarget;
-  const options = ['Last 7 days', 'Last 30 days', 'Last 90 days'];
-  const current = options.indexOf(button.childNodes[0].textContent.trim());
-  const next = options[(current + 1) % options.length];
-  button.childNodes[0].textContent = next + ' ';
-  showToast(`Showing ${next.toLowerCase()}`);
-});
+document.querySelectorAll('.nav-item[data-view]').forEach((item) => item.addEventListener('click', () => { document.querySelectorAll('.nav-item').forEach((navItem) => navItem.classList.remove('active')); item.classList.add('active'); renderView(item.dataset.view); closeMenu(); }));
+document.querySelectorAll('[data-action]').forEach((button) => button.addEventListener('click', () => showToast(`${button.dataset.action[0].toUpperCase()}${button.dataset.action.slice(1)} opened`)));
+document.querySelector('#newSession').addEventListener('click', () => openForm('Note', data.clients[0]));
+document.querySelector('#calendarButton').addEventListener('click', () => renderView('Calendar'));
+document.querySelector('#briefButton').addEventListener('click', openSarahBrief);
+document.querySelector('#portalButton').addEventListener('click', renderPortal);
+document.querySelector('#searchButton').addEventListener('click', () => { const query = window.prompt('Search clients and notes'); if (query) showToast(`Searching for ${query}`); });
+document.querySelector('.profile-mini').addEventListener('click', renderPortal);
+document.querySelector('#trendFilter').addEventListener('click', (event) => { const button = event.currentTarget; const options = ['Last 7 days', 'Last 30 days', 'Last 90 days']; const current = options.indexOf(button.childNodes[0].textContent.trim()); const next = options[(current + 1) % options.length]; button.childNodes[0].textContent = `${next} `; showToast(`Showing ${next.toLowerCase()}`); });
+function appendMessageHistory() { const list = document.querySelector('.message-row')?.parentElement; if (!list || !data.messages.length || list.querySelector('.saved-message')) return; list.insertAdjacentHTML('beforeend', data.messages.map((message) => `<div class="message-row saved-message"><div class="signal-icon green"><i data-lucide="send"></i></div><div><strong>You · ${message.date}</strong><p>${message.text}</p></div></div>`).join('')); refreshIcons(); }
+document.addEventListener('click', (event) => { if (event.target.closest("button[data-view='Messages']")) setTimeout(appendMessageHistory, 0); });
+document.addEventListener('submit', (event) => { const form = event.target; if (form.id !== 'dataForm' || form.querySelector('.eyebrow')?.textContent !== 'MESSAGE') return; const text = new FormData(form).get('text'); if (text) { data.messages.push({ text, date: new Date().toLocaleDateString('en-GB') }); saveData(); renderView('Messages'); appendMessageHistory(); } });
